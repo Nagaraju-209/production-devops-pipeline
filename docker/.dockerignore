@@ -1,0 +1,11 @@
+.git
+.github
+target
+.idea
+.vscode
+*.iml
+*.log
+README.md
+docs
+screenshots
+diagrams
