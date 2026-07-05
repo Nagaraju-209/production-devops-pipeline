@@ -66,7 +66,29 @@ docker build -f docker/Dockerfile -t production-devops-pipeline:v1 .
 ```bash
 docker run -d --name springboot-container -p 8082:8082 production-devops-pipeline:v1
 ```
+## Docker
 
+### Build
+
+```bash
+docker build -f docker/Dockerfile -t production-devops-pipeline:v1.0.0 .
+```
+
+### Run
+
+```bash
+docker run -d \
+-p 8082:8082 \
+production-devops-pipeline:v1.0.0
+``` 
+
+### Image Details
+
+Property	Value
+Image	    production-devops-pipeline
+Version     v1.0.0
+Java	    17
+Spring Boot	3.x
 
 ## Project Roadmap
 

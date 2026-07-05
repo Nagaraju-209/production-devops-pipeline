@@ -19,12 +19,34 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:17-jre
 
 LABEL maintainer="Dandu Rama Siva Naga Raju"
-LABEL project="Production DevOps Pipeline"
+
+LABEL org.opencontainers.image.title="Production DevOps Pipeline"
+
+LABEL org.opencontainers.image.version="1.0.0"
+
+LABEL org.opencontainers.image.description="Spring Boot DevOps Production Pipeline"
+
+LABEL org.opencontainers.image.authors="Dandu Rama Siva Naga Raju"
+
+LABEL org.opencontainers.image.source="https://github.com/nagarajucsd/production-devops-pipeline"
 
 WORKDIR /app
 
-COPY --from=builder /build/target/*.jar app.jar
+# Create non-root user
+RUN groupadd -r spring && useradd -r -g spring spring
+
+# Copy the jar and change its ownership to the 'spring' user
+COPY --from=builder --chown=spring:spring /build/target/*.jar app.jar
+
+USER spring
 
 EXPOSE 8082
 
-ENTRYPOINT ["java","-jar","app.jar"]
+ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar app.jar"]
+
+
+HEALTHCHECK --interval=30s \
+--timeout=5s \
+--start-period=20s \
+--retries=3 \
+CMD wget --no-verbose --tries=1 --spider http://localhost:8082/actuator/health || exit 1
