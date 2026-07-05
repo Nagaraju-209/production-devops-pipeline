@@ -53,6 +53,20 @@ scripts/
 - Logging
 
 ---
+## Docker
+
+### Build
+
+```bash
+docker build -f docker/Dockerfile -t production-devops-pipeline:v1 .
+```
+
+### Run
+
+```bash
+docker run -d --name springboot-container -p 8082:8082 production-devops-pipeline:v1
+```
+
 
 ## Project Roadmap
 
