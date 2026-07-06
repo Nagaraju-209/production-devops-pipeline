@@ -36,17 +36,19 @@ WORKDIR /app
 RUN groupadd -r spring && useradd -r -g spring spring
 
 # Copy the jar and change its ownership to the 'spring' user
-COPY --from=builder --chown=spring:spring /build/target/*.jar app.jar
+COPY --from=builder  /build/target/*.jar app.jar
+
+RUN chown spring:spring app.jar
 
 USER spring
 
 EXPOSE 8082
 
-ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar app.jar"]
-
-
+# Define health probe before launching the application
 HEALTHCHECK --interval=30s \
 --timeout=5s \
 --start-period=20s \
 --retries=3 \
 CMD wget --no-verbose --tries=1 --spider http://localhost:8082/actuator/health || exit 1
+
+ENTRYPOINT ["java","-jar","app.jar"]
