@@ -84,10 +84,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh '''
-                docker build \
-                -f docker/Dockerfile \
-                -t ${IMAGE_NAME}:${BUILD_NUMBER} \
-                -t ${IMAGE_NAME}:latest .
+                chmod +x scripts/docker-build.sh
+                ./scripts/docker-build.sh
                 '''
             }
         }
@@ -115,7 +113,8 @@ pipeline {
 
         stage('Cleanup Old Container') {
             steps {
-                sh 'docker rm -f ${CONTAINER_NAME} || true'
+                sh '''chmod +x scripts/docker-cleanup.sh
+                ./scripts/docker-cleanup.sh'''
             }
         }
 
@@ -123,10 +122,8 @@ pipeline {
             steps {
                 // Uses the APP_PORT variable dynamically instead of hardcoding 8082
                 sh '''
-                docker run -d \
-                --name ${CONTAINER_NAME} \
-                -p ${APP_PORT}:${APP_PORT} \
-                ${IMAGE_NAME}:${BUILD_NUMBER}
+                chmod +x scripts/docker-run.sh
+                ./scripts/docker-run.sh
                 '''
             }
         }   
@@ -134,23 +131,12 @@ pipeline {
         stage('Health Check') {
             steps {
                 script {
-                    timeout(time: 2, unit: 'MINUTES') {
-                        waitUntil {
-                            def status = sh(
-                                script: '''
-                                curl -s http://localhost:8082/actuator/health | grep '"status":"UP"'
-                                ''',
-                                returnStatus: true
-                            )
-                            return (status == 0)
-                        }
-                    }
+                    sh '''chmod +x scripts/docker-build.sh
+                    ./scripts/docker-build.sh'''
                 }
             }
         }
-
     }
-
     post {
 
         success {
