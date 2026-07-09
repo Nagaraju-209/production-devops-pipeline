@@ -9,9 +9,10 @@ echo "====================================="
 mkdir -p reports
 
 trivy image \
+--cache-dir .trivycache \
 --timeout 15m \
---format table \
+--format table \    
 -o reports/trivy-image-report.txt \
-production-devops-pipeline:latest
+${IMAGE_NAME}:latest
 
 echo "Docker image scan completed."
