@@ -9,6 +9,7 @@ echo "=================================="
 mkdir -p reports
 
 trivy fs \
+--cache-dir .trivycache \
 --format table \
 -o reports/trivy-fs-report.txt .
 
