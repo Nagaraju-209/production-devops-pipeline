@@ -1,6 +1,11 @@
 package com.devops.springboot_app.service.impl;
 
+import com.devops.springboot_app.dto.EmployeeRequest;
+import com.devops.springboot_app.dto.EmployeeResponse;
 import com.devops.springboot_app.entity.Employee;
+import com.devops.springboot_app.exception.DuplicateEmployeeException;
+import com.devops.springboot_app.exception.EmployeeNotFoundException;
+import com.devops.springboot_app.mapper.EmployeeMapper;
 import com.devops.springboot_app.repository.EmployeeRepository;
 import com.devops.springboot_app.service.EmployeeService;
 import org.springframework.stereotype.Service;
@@ -11,55 +16,80 @@ import java.util.List;
 public class EmployeeServiceImpl implements EmployeeService {
 
     private final EmployeeRepository repository;
+    private final EmployeeMapper mapper;
 
-    public EmployeeServiceImpl(EmployeeRepository repository) {
+    public EmployeeServiceImpl(EmployeeRepository repository,EmployeeMapper mapper) {
         this.repository = repository;
+        this.mapper = mapper;
     }
 
     @Override
-    public Employee createEmployee(Employee employee) {
+    public EmployeeResponse createEmployee(EmployeeRequest request) {
 
-        if (repository.existsByEmail(employee.getEmail())) {
-            throw new RuntimeException("Email already exists");
+        if (repository.existsByEmail(request.getEmail())) {
+            throw new DuplicateEmployeeException(
+                "Email",
+                request.getEmail());
         }
 
-        if (repository.existsByEmployeeId(employee.getEmployeeId())) {
-            throw new RuntimeException("Employee ID already exists");
+        if (repository.existsByEmployeeId(request.getEmployeeId())) {
+            throw new DuplicateEmployeeException(
+                "Employee ID",
+                request.getEmployeeId());
         }
 
-        return repository.save(employee);
+        Employee employee = mapper.toEntity(request);
+
+        Employee savedEmployee = repository.save(employee);
+
+        return mapper.toResponse(savedEmployee);
     }
 
     @Override
-    public List<Employee> getAllEmployees() {
-        return repository.findAll();
+    public List<EmployeeResponse> getAllEmployees() {
+
+        return repository.findAll()
+            .stream()
+            .map(mapper::toResponse)
+            .toList();
     }
 
     @Override
-    public Employee getEmployeeById(Long id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+    public EmployeeResponse getEmployeeById(Long id) {
+
+        Employee employee = repository.findById(id)
+            .orElseThrow(() ->
+                    new EmployeeNotFoundException(id));
+
+        return mapper.toResponse(employee);
     }
 
     @Override
-    public Employee updateEmployee(Long id, Employee employee) {
+    public EmployeeResponse updateEmployee(Long id,
+                                       EmployeeRequest request) {
 
-        Employee existing = getEmployeeById(id);
+        Employee existing = repository.findById(id)
+            .orElseThrow(() ->
+                    new EmployeeNotFoundException(id));
 
-        existing.setFirstName(employee.getFirstName());
-        existing.setLastName(employee.getLastName());
-        existing.setDepartment(employee.getDepartment());
-        existing.setDesignation(employee.getDesignation());
-        existing.setSalary(employee.getSalary());
+        existing.setFirstName(request.getFirstName());
+        existing.setLastName(request.getLastName());
+        existing.setDepartment(request.getDepartment());
+        existing.setDesignation(request.getDesignation());
+        existing.setSalary(request.getSalary());
 
-        return repository.save(existing);
+        Employee updatedEmployee = repository.save(existing);
+
+        return mapper.toResponse(updatedEmployee);
     }
 
     @Override
     public void deleteEmployee(Long id) {
 
-        Employee employee = getEmployeeById(id);
+        Employee employee = repository.findById(id)
+            .orElseThrow(() ->
+                    new EmployeeNotFoundException(id));
 
         repository.delete(employee);
-    }
+}
 }

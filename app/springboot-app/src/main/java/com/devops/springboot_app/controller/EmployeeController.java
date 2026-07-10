@@ -1,13 +1,24 @@
 package com.devops.springboot_app.controller;
 
 import com.devops.springboot_app.dto.ApiResponse;
-import com.devops.springboot_app.entity.Employee;
+import com.devops.springboot_app.dto.EmployeeRequest;
+import com.devops.springboot_app.dto.EmployeeResponse;
 import com.devops.springboot_app.service.EmployeeService;
+import jakarta.validation.Valid;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+@Tag(
+    name = "Employee Management",
+    description = "Employee CRUD REST APIs"
+)
 
 @RestController
 @RequestMapping("/api/employees")
@@ -22,24 +33,34 @@ public class EmployeeController {
         this.employeeService = employeeService;
     }
 
+    @Operation(
+        summary = "Create Employee",
+        description = "Creates a new employee in the database."
+    )
+
     @PostMapping
-    public ApiResponse<Employee> createEmployee(
-            @RequestBody Employee employee) {
+    public ApiResponse<EmployeeResponse> createEmployee(
+            @Valid @RequestBody EmployeeRequest request) {
 
-        logger.info("Creating Employee : {}", employee.getEmployeeId());
+        logger.info("Creating employee : {}", request.getEmployeeId());
 
-        Employee savedEmployee =
-                employeeService.createEmployee(employee);
+        EmployeeResponse response =
+                employeeService.createEmployee(request);
 
         return new ApiResponse<>(
                 true,
                 "Employee created successfully",
-                savedEmployee
+                response
         );
     }
+    
+    @Operation(
+        summary = "Get All Employees",
+        description = "Returns all employees."
+    )
 
     @GetMapping
-    public ApiResponse<List<Employee>> getAllEmployees() {
+    public ApiResponse<List<EmployeeResponse>> getAllEmployees() {
 
         logger.info("Fetching all employees");
 
@@ -50,8 +71,13 @@ public class EmployeeController {
         );
     }
 
+    @Operation(
+        summary = "Get Employee By ID",
+        description = "Returns an employee using the database ID."
+    )
+
     @GetMapping("/{id}")
-    public ApiResponse<Employee> getEmployeeById(
+    public ApiResponse<EmployeeResponse> getEmployeeById(
             @PathVariable Long id) {
 
         logger.info("Fetching employee {}", id);
@@ -63,20 +89,28 @@ public class EmployeeController {
         );
     }
 
+    @Operation(
+        summary = "Update Employee",
+        description = "Updates an existing employee."
+    )
     @PutMapping("/{id}")
-    public ApiResponse<Employee> updateEmployee(
+    public ApiResponse<EmployeeResponse> updateEmployee(
             @PathVariable Long id,
-            @RequestBody Employee employee) {
+            @Valid @RequestBody EmployeeRequest request) {
 
         logger.info("Updating employee {}", id);
 
         return new ApiResponse<>(
                 true,
                 "Employee updated successfully",
-                employeeService.updateEmployee(id, employee)
+                employeeService.updateEmployee(id, request)
         );
     }
 
+    @Operation(
+        summary = "Delete Employee",
+        description = "Deletes an employee by ID."
+    )
     @DeleteMapping("/{id}")
     public ApiResponse<String> deleteEmployee(
             @PathVariable Long id) {
