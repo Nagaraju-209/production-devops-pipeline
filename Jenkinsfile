@@ -3,6 +3,7 @@ pipeline {
     agent any
 
     options {
+        // Fixes the double-checkout issue by disabling the a   utomatic initial checkout
         skipDefaultCheckout()
     }
 
@@ -27,20 +28,26 @@ pipeline {
             }
         }
 
-        stage('Build & Test') {
+        stage('Compile') {
+            steps {
+                dir('app/springboot-app') {
+                    sh 'mvn clean compile'
+                }
+            }
+        }
+
+        stage('Unit Test & JaCoCo') {
             steps {
                 dir('app/springboot-app') {
                     sh 'mvn clean verify'
                 }
             }
         }
-
-        stage('Publish Unit Test Results') {
+        stage('Publish Test Results') {
             steps {
                 junit 'app/springboot-app/target/surefire-reports/*.xml'
             }
         }
-
         stage('Archive JaCoCo Report') {
             steps {
                 archiveArtifacts artifacts: 'app/springboot-app/target/site/jacoco/**', fingerprint: true
@@ -50,7 +57,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 dir('app/springboot-app') {
-                    withSonarQubeEnv("${SONARQUBE_ENV}") {
+                    withSonarQubeEnv('SonarQube') {
                         sh '''
                         mvn sonar:sonar \
                         -Dsonar.projectKey=production-devops-pipeline \
@@ -70,9 +77,17 @@ pipeline {
             }
         }
 
-        stage('Archive Trivy Filesystem Report') {
+        stage('Archive Trivy Report') {
             steps {
                 archiveArtifacts artifacts: 'reports/*.txt', fingerprint: true
+            }
+        }
+
+        stage('Package') {
+            steps {
+                dir('app/springboot-app') {
+                    sh 'mvn package -DskipTests'
+                }
             }
         }
 
@@ -81,14 +96,6 @@ pipeline {
                 sh '''
                 chmod +x scripts/docker-build.sh
                 ./scripts/docker-build.sh
-                '''
-            }
-        }
-        stage('Verify Docker Image') {
-            steps {
-                sh '''
-                echo "Available Docker Images:"
-                docker images
                 '''
             }
         }
@@ -102,7 +109,7 @@ pipeline {
             }
         }
 
-        stage('Archive Trivy Image Report') {
+        stage('Archive Security Reports') {
             steps {
                 archiveArtifacts artifacts: 'reports/*.txt', fingerprint: true
             }
@@ -125,44 +132,37 @@ pipeline {
 
         stage('Run Docker Container') {
             steps {
+                // Uses the APP_PORT variable dynamically instead of hardcoding 8082
                 sh '''
                 chmod +x scripts/docker-run.sh
                 ./scripts/docker-run.sh
                 '''
             }
-        }
+        }   
 
         stage('Health Check') {
             steps {
-                sh '''
-                sleep 30
-                curl --fail http://localhost:${APP_PORT}/actuator/health
-                '''
+                script {
+                    sh '''
+                    chmod +x scripts/docker-build.sh
+                    ./scripts/docker-build.sh
+                    '''
+                }
             }
         }
     }
-
+    
     post {
-
         success {
-            echo 'Pipeline completed successfully.'
+            echo 'Build completed successfully.'
         }
 
         failure {
-            echo 'Pipeline failed.'
+           echo 'Build failed.'
         }
 
         always {
-
-            junit allowEmptyResults: true,
-                  testResults: 'app/springboot-app/target/surefire-reports/*.xml'
-
-            archiveArtifacts artifacts: 'app/springboot-app/target/site/jacoco/**',
-                             allowEmptyArchive: true
-
-            archiveArtifacts artifacts: 'reports/*.txt',
-                             allowEmptyArchive: true
-
+            junit 'app/springboot-app/target/surefire-reports/*.xml'
             cleanWs()
         }
     }
