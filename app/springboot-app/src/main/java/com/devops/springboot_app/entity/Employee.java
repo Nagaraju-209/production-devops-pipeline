@@ -5,14 +5,20 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "employees")
+@Table(
+    name = "employees",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_employee_employee_id", columnNames = "employeeId"),
+        @UniqueConstraint(name = "uk_employee_email", columnNames = "email")
+    }
+)
 public class Employee {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String employeeId;
 
     @Column(nullable = false)
@@ -21,7 +27,7 @@ public class Employee {
     @Column(nullable = false)
     private String lastName;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String email;
 
     @Column(nullable = false)
@@ -33,8 +39,10 @@ public class Employee {
     @Column(nullable = false)
     private BigDecimal salary;
 
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(nullable = false)
     private LocalDateTime updatedAt;
 
     @PrePersist

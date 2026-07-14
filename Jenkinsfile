@@ -3,7 +3,6 @@ pipeline {
     agent any
 
     options {
-        // Fixes the double-checkout issue by disabling the automatic initial checkout
         skipDefaultCheckout()
     }
 
@@ -12,7 +11,7 @@ pipeline {
         IMAGE_NAME     = 'production-devops-pipeline'
         CONTAINER_NAME = 'springboot-container'
         APP_PORT       = '8082'
-        SONARQUBE_ENV="SonarQube"
+        SONARQUBE_ENV  = 'SonarQube'
     }
 
     tools {
@@ -28,30 +27,34 @@ pipeline {
             }
         }
 
-        stage('Compile') {
+        stage('Build & Test') {
             steps {
                 dir('app/springboot-app') {
-                    sh 'mvn clean compile'
+                    sh 'mvn clean verify'
                 }
             }
         }
 
-        stage('Unit Test') {
+        stage('Publish Unit Test Results') {
             steps {
-                dir('app/springboot-app') {
-                    sh 'mvn test'
-                }
+                junit 'app/springboot-app/target/surefire-reports/*.xml'
+            }
+        }
+
+        stage('Archive JaCoCo Report') {
+            steps {
+                archiveArtifacts artifacts: 'app/springboot-app/target/site/jacoco/**', fingerprint: true
             }
         }
 
         stage('SonarQube Analysis') {
-
             steps {
                 dir('app/springboot-app') {
-                    withSonarQubeEnv('SonarQube') {
+                    withSonarQubeEnv("${SONARQUBE_ENV}") {
                         sh '''
                         mvn sonar:sonar \
                         -Dsonar.projectKey=production-devops-pipeline \
+                        -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
                         '''
                     }
                 }
@@ -67,17 +70,9 @@ pipeline {
             }
         }
 
-        stage('Archive Trivy Report') {
+        stage('Archive Trivy Filesystem Report') {
             steps {
                 archiveArtifacts artifacts: 'reports/*.txt', fingerprint: true
-            }
-        }
-
-        stage('Package') {
-            steps {
-                dir('app/springboot-app') {
-                    sh 'mvn package -DskipTests'
-                }
             }
         }
 
@@ -99,7 +94,7 @@ pipeline {
             }
         }
 
-        stage('Archive Security Reports') {
+        stage('Archive Trivy Image Report') {
             steps {
                 archiveArtifacts artifacts: 'reports/*.txt', fingerprint: true
             }
@@ -113,42 +108,53 @@ pipeline {
 
         stage('Cleanup Old Container') {
             steps {
-                sh '''chmod +x scripts/docker-cleanup.sh
-                ./scripts/docker-cleanup.sh'''
+                sh '''
+                chmod +x scripts/docker-cleanup.sh
+                ./scripts/docker-cleanup.sh
+                '''
             }
         }
 
         stage('Run Docker Container') {
             steps {
-                // Uses the APP_PORT variable dynamically instead of hardcoding 8082
                 sh '''
                 chmod +x scripts/docker-run.sh
                 ./scripts/docker-run.sh
                 '''
             }
-        }   
+        }
 
         stage('Health Check') {
             steps {
-                script {
-                    sh '''chmod +x scripts/docker-build.sh
-                    ./scripts/docker-build.sh'''
-                }
+                sh '''
+                sleep 30
+                curl --fail http://localhost:${APP_PORT}/actuator/health
+                '''
             }
         }
     }
+
     post {
 
         success {
-            echo 'Build completed successfully.'
+            echo 'Pipeline completed successfully.'
         }
 
         failure {
-           echo 'Build failed.'
+            echo 'Pipeline failed.'
         }
 
         always {
-            junit 'app/springboot-app/target/surefire-reports/*.xml'
+
+            junit allowEmptyResults: true,
+                  testResults: 'app/springboot-app/target/surefire-reports/*.xml'
+
+            archiveArtifacts artifacts: 'app/springboot-app/target/site/jacoco/**',
+                             allowEmptyArchive: true
+
+            archiveArtifacts artifacts: 'reports/*.txt',
+                             allowEmptyArchive: true
+
             cleanWs()
         }
     }
