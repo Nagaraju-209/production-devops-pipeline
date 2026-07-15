@@ -70,7 +70,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 dir('app/springboot-app') {
-                    withSonarQubeEnv('${SONARQUBE_ENV}') {
+                    withEnv('${SONARQUBE_ENV}') {
                         sh '''
                         mvn sonar:sonar \
                         -Dsonar.projectKey=production-devops-pipeline \
