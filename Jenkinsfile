@@ -144,23 +144,22 @@ pipeline {
 
         
 
-        stage('Cleanup Old Container') {
+        stage('Deploy with Docker Compose') {
             steps {
                 sh '''
-                chmod +x scripts/docker-cleanup.sh
-                ./scripts/docker-cleanup.sh
+                chmod +x scripts/docker-compose-deploy.sh
+                ./scripts/docker-compose-deploy.sh
                 '''
             }
         }
 
-        stage('Run Docker Container') {
-            steps {                
+        stage('Verify Docker Compose Services') {
+            steps {
                 sh '''
-                chmod +x scripts/docker-run.sh
-                ./scripts/docker-run.sh
+                docker compose -f docker-compose/docker-compose.yml ps
                 '''
             }
-        }   
+        }
 
         stage('Health Check') {
             steps {
