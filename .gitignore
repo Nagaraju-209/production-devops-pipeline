@@ -8,6 +8,8 @@ target/
 
 .vscode/
 
+.trivycache/
+
 .DS_Store
 
 # Compiled class file
