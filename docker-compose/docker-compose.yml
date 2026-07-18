@@ -1,0 +1,63 @@
+services:
+
+  mysql-db:
+    image: mysql:8.4
+    container_name: mysql-db
+
+    restart: unless-stopped
+
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+
+    ports:
+      - "3306:3306"
+
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+    networks:
+      - devops-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  springboot-app:
+
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+
+    image: production-devops-pipeline:latest
+
+    container_name: springboot-container
+
+    restart: unless-stopped
+
+    depends_on:
+      - mysql-db
+
+    ports:
+      - "${APP_PORT}:8082"
+
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+
+    networks:
+      - devops-network
+    
+
+networks:
+
+  devops-network:
+
+volumes:
+
+  mysql-data:
