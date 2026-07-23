@@ -132,10 +132,11 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.5.2</version>
-
+                <version>3.2.5</version>
                 <configuration>
-                    <forkCount>1</forkCount>
+                    <!-- Fail any test process that takes longer than 120 seconds -->
+                    <forkedProcessTimeoutInSeconds>120</forkedProcessTimeoutInSeconds>
+                    <!-- Re-use forks to save CPU/RAM overhead on local machine -->
                     <reuseForks>true</reuseForks>
                 </configuration>
             </plugin>
